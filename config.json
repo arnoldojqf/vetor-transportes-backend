@@ -1,13 +1,13 @@
 ﻿{
-    "connectionString": "mongodb://localhost/node-mongo-signup-verification-api",
-    "secret": "THIS IS USED TO SIGN AND VERIFY JWT TOKENS, REPLACE IT WITH YOUR OWN SECRET, IT CAN BE ANY STRING",
+    "connectionString": "mongodb://localhost/vetor-transportes-backend",
+    "secret": "687bf504-4ce7-4f7a-b44b-c52c65f3dc82",
     "emailFrom": "info@node-mongo-signup-verification-api.com",
     "smtpOptions": {
-        "host": "[ENTER YOUR OWN SMTP OPTIONS OR CREATE FREE TEST ACCOUNT IN ONE CLICK AT https://ethereal.email/]",
+        "host": "smtp.ethereal.email",
         "port": 587,
         "auth": {
-            "user": "",
-            "pass": ""
+            "user": "julius.zboncak42@ethereal.email",
+            "pass": "WV2qkJG7WgxZxFkBBy"
         }
     }
 }
