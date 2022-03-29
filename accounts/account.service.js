@@ -26,7 +26,7 @@ async function authenticate({ email, password, ipAddress }) {
     const account = await db.Account.findOne({ email });
 
     if (!account || !account.isVerified || !bcrypt.compareSync(password, account.passwordHash)) {
-        throw 'Email or password is incorrect';
+        throw 'Email ou senha incorreto';
     }
 
     // authentication successful so generate jwt and refresh tokens
