@@ -15,7 +15,7 @@ router.delete('/:id', authorize(), _delete);
 module.exports = router;
 
 function getAll(req, res, next) {
-    shippingService.create()
+    shippingService.save()
         .then(shippings => res.json(shippings))
         .catch(next);
 }
@@ -34,8 +34,8 @@ function createSchema(req, res, next) {
 }
 
 function create(req, res, next) {
-    shippingService.create(req.body)
-        .then(shipping => res.json(shipping))
+    shippingService.save(req.body)
+        .then(shippings => res.json(shippings))
         .catch(next);
 }
 
@@ -65,7 +65,7 @@ function update(req, res, next) {
 }
 
 function _delete(req, res, next) {
-    shippingService.delete(req.params.id)
+    shippingService._delete(req.params.id)
         .then(() => res.json({ message: 'Shipping deleted successfully' }))
         .catch(next);
 }
