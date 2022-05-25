@@ -30,34 +30,6 @@ async function list () {
   })
 }
 
-async function create() {
-
-    const params = fetchWrapper.get("https://envios.mercadolivre.com.br/logistics/api/routes?sc=SMG1");
-
-    params.forEach(function(data) {  
-        
-        //console.log(data);
-        // validate
-        db.Shipping.findOne({ id: data.id }, function (err, doc) {
-            if (err){
-                console.log(err);
-            }
-            else{
-                let shipping = new db.Shipping(data);
-                // save shipping
-                shipping.save();
-            }
-        });
-    });        
-
-    return basicDetails(params);
-}
-
-function basicDetails(shipping) {
-    const { id, type, linehaulId, cluster, carrier, dateFirstMovement, status, hasHelper, hasPlaces, hasBulky, substatus, deliveryType, facilityId, facilityType, initDate, finalDate, created, updated } = shipping;
-    return { id, type, linehaulId, cluster, carrier, dateFirstMovement, status, hasHelper, hasPlaces, hasBulky, substatus, deliveryType, facilityId, facilityType, initDate, finalDate, created, updated };
-}
-
 async function save() {
     const client = await new MongoClient(dbConfig.connectionString).connect();
     
@@ -66,7 +38,7 @@ async function save() {
   //let data = req.body.data   
     const objects = await fetchWrapper.get("https://envios.mercadolivre.com.br/logistics/api/routes?sc=SMG1");              
 
-    console.log('objects', objects);
+    let totalImported = 0;
 
     await objects.forEach(async function(data) {          
         //console.log(data);                                    
@@ -80,18 +52,20 @@ async function save() {
                 return console.log('Erro ao procurar shipping na DB: ', err);
 
             if (item)
-                return console.log('Item existente: ', item);
+                return console.log('Item existente: ', item.id);
 
             await client.db("vetor-transportes-backend").collection('shippings').insertOne(data, function (err, r) {
                 if (err)
-                    return console.log('Erro ao inserir shipping na DB: ', err);                    
-            });
+                    return console.log('Erro ao inserir shipping na DB: ', err);                                    
+            });            
+
+            totalImported++;
         });            
-    });                        
+    });    
 
     //await client.close();
     
-    return objects;
+    return objects.length;
 }
 
 async function edit() {

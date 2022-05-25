@@ -5,6 +5,7 @@ const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const errorHandler = require('_middleware/error-handler');
+const schedule = require('_helpers/schedule');
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -22,6 +23,9 @@ app.use('/api-docs', require('_helpers/swagger'));
 
 // global error handler
 app.use(errorHandler);
+
+// schedule jobs
+schedule.importLogistics();
 
 // start server
 const port = process.env.NODE_ENV === 'production' ? (process.env.PORT || 80) : 4000;
