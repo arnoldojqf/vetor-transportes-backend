@@ -28,7 +28,7 @@ function importClaims() {
 
     console.log('Trying to schedule the importClaims Job');
 
-    const job = schedule.scheduleJob('0 * * * * *', function() {    
+    const job = schedule.scheduleJob('30 * * * * *', function() {    
 
     shippingService.importClaims()
             .then((result) => 

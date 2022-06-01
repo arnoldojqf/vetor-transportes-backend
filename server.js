@@ -25,7 +25,7 @@ app.use('/api-docs', require('_helpers/swagger'));
 app.use(errorHandler);
 
 // schedule jobs
-//schedule.importRoutes();
+schedule.importRoutes();
 schedule.importClaims();
 
 // start server

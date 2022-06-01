@@ -164,7 +164,7 @@ async function saveClaims(routes) {
             // validate
             client.db("vetor-transportes-backend").collection('shippings').updateOne(
                 { id: route.id },
-                { $set: route },
+                { $addToSet: { claims: route.claims } },
                 { upsert: true },
                 async function (err, item) {
                     if (err)
