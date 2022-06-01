@@ -10,10 +10,12 @@ const shippings = {}
 const dbConfig = require('config.json');
 const { MongoClient } = require("mongodb");
 const ObjectId = require('mongodb').ObjectID;
+const Excel = require('exceljs');
 
 module.exports = {
     list,
     importRoutes,
+    importClaims,
     edit,
     update,
     _delete
@@ -73,6 +75,103 @@ async function importRouteDetails(id) {
     });
     
     return detailsData.length;
+}
+
+async function importClaims() {
+    //requiring path and fs modules
+    const path = require('path');
+    const fs = require('fs');
+    //joining path of directory 
+    const directoryPath = path.join(__dirname, 'data/claims_logistics');
+    //passsing directoryPath and callback function
+    fs.readdir(directoryPath, function (err, files) {        
+        //handling error
+        if (err) {
+            return console.log('Unable to scan directory: ' + err);
+        } 
+        //listing all files using forEach
+        files.forEach(async function (file) {
+            if (path.extname(file) != ".xlsx")
+                return;
+
+            const filePath = path.join(directoryPath, file);
+            
+            // Do whatever you want to do with the file            
+            await readClaimsFile(filePath);
+        });
+    });  
+    
+    return true;
+}
+
+async function readClaimsFile(filename){
+    const workbook = new Excel.Workbook();
+    await workbook.xlsx.readFile(filename);
+
+    let routes = [];
+
+    workbook.worksheets.forEach(function(sheet) {
+        // read first row as data keys
+        let firstRow = sheet.getRow(1);
+        if (!firstRow.cellCount) return;
+        let keys = firstRow.values;
+        sheet.eachRow((row, rowNumber) => {
+            if (rowNumber == 1) return;
+            
+            let values = row.values;
+            let claim = {};
+
+            for (let i = 1; i < keys.length; i ++) {
+                claim[keys[i]] = values[i];
+            }
+
+            let routeIdColIndex = keys.findIndex(x => x == 'ROUTE_ID');
+            let routeId = values[routeIdColIndex];
+            let existingRouteIndex = routes.findIndex(route => route.id == routeId);            
+
+            if (existingRouteIndex != -1) {                                                
+                routes[existingRouteIndex].claims.push(claim);
+            } else {
+                let route = {};
+                route.id = routeId;
+                route.claims = [];
+                route.claims.push(claim);
+                routes.push(route);
+            }            
+        })
+    }); 
+
+    await saveClaims(routes);
+}
+
+async function saveClaims(routes) {    
+    const client = await new MongoClient(dbConfig.connectionString).connect();
+
+    await routes.forEach(async function(route) {
+        
+        //const route = await client.db("vetor-transportes-backend").collection('shippings').findOne({ id: claim.ROUTE_ID });                
+
+        // if(!route) {            
+        //     const doc = {
+        //         id: claim.ROUTE_ID,
+        //         claims: [{claim}]
+        //       }
+
+        //     await client.db("vetor-transportes-backend").collection('shippings').insertOne(doc);
+        // } else {
+        //     console.log('update route id', claim.ROUTE_ID);            
+            
+            // validate
+            client.db("vetor-transportes-backend").collection('shippings').updateOne(
+                { id: route.id },
+                { $set: route },
+                { upsert: true },
+                async function (err, item) {
+                    if (err)
+                        return console.log('Erro ao inserir/atualizar claims na DB: ', err);            
+            });
+        //}                    
+    });
 }
 
 async function edit() {

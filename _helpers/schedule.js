@@ -2,7 +2,8 @@ const schedule = require('node-schedule');
 const shippingService = require('shippings/shipping.service');
 
 module.exports = {
-    importRoutes
+    importRoutes,
+    importClaims
 };
 
 function importRoutes() {
@@ -21,6 +22,24 @@ function importRoutes() {
     });
 
     console.log('Job importRoutes successfully scheduled');
+}
+
+function importClaims() {
+
+    console.log('Trying to schedule the importClaims Job');
+
+    const job = schedule.scheduleJob('0 * * * * *', function() {    
+
+    shippingService.importClaims()
+            .then((result) => 
+                {
+                    console.log('importClaims Job run succesfully: ', result);                    
+                }).catch((err) => {
+                    console.log('Error on running Job importClaims: ', err);
+                });    
+    });
+
+    console.log('Job importClaims successfully scheduled');
 }
 
 // function importRouteDetails() {

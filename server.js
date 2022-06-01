@@ -25,8 +25,8 @@ app.use('/api-docs', require('_helpers/swagger'));
 app.use(errorHandler);
 
 // schedule jobs
-schedule.importRoutes();
-// schedule.importRouteDetails();
+//schedule.importRoutes();
+schedule.importClaims();
 
 // start server
 const port = process.env.NODE_ENV === 'production' ? (process.env.PORT || 80) : 4000;
