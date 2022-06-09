@@ -14,7 +14,7 @@ const Excel = require('exceljs');
 
 module.exports = {
     getLogisticsAnalitico
-};
+}
 
 // const toTimestamp = (strDate) => {  
 //     const dt = Date.parse(strDate);  
@@ -32,17 +32,33 @@ const toTimestamp = (date) => {
 }
 
 async function getLogisticsAnalitico() {
+    let result = [];
+        
     try {
         const client = await new MongoClient(dbConfig.connectionString).connect();
 
-        return await client.db("vetor-transportes-backend").collection('shippings').find(
-            {            
-                initDate: {
-                    $gte: toTimestamp(new Date(new Date().setHours(00, 00, 00))),
-                    $lte: toTimestamp(new Date(new Date().setHours(23, 59, 59))),
-                },
-            });        
+        const pipeline = [
+            { 
+                $match: {
+                    initDate: {
+                        $gte: toTimestamp(new Date(new Date().setHours(00, 00, 00))),
+                        $lte: toTimestamp(new Date(new Date().setHours(23, 59, 59))),
+                    },
+                } 
+            },
+            {
+                $addFields: {                    
+                    dtInitDate: { "$toDate": {"$toLong": { $multiply: [ "$initDate", 1000 ] } } },
+                    dtFinalDate: { "$toDate": {"$toLong": { $multiply: [ "$finalDate", 1000 ] } } }
+                }
+            }
+        ];
+
+        result = await client.db("vetor-transportes-backend").collection('shippings').aggregate(pipeline).toArray();        
+        
       } catch (err) {
         console.error(`Error on reports.service.list(): ${err}`);
-      }
+      }      
+
+      return result;
 }
