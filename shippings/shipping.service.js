@@ -11,6 +11,7 @@ const dbConfig = require('config.json');
 const { MongoClient } = require("mongodb");
 const ObjectId = require('mongodb').ObjectID;
 const Excel = require('exceljs');
+var claims = [];
 
 module.exports = {
     list,
@@ -35,9 +36,9 @@ async function list () {
 async function importRoutes() {
     const client = await new MongoClient(dbConfig.connectionString).connect();
     
-    const objects = await fetchWrapper.get("https://envios.mercadolivre.com.br/logistics/api/routes?sc=SMG1");              
+    const routes = await fetchWrapper.get("https://envios.mercadolivre.com.br/logistics/api/routes?sc=SMG1");              
 
-    await objects.forEach(async function(data) {        
+    await routes.forEach(async function(data) {        
 
         const updateDocument = {
             $set: data
@@ -56,7 +57,9 @@ async function importRoutes() {
 
     //await client.close();
     
-    return objects.length;
+    console.log('routes: ', routes);
+
+    return routes;
 }
 
 async function importRouteDetails(id) {
@@ -100,15 +103,17 @@ async function importClaims() {
             await readClaimsFile(filePath);
         });
     });  
+
+    console.log('claims: ', claims);
     
-    return true;
+    return claims;
 }
 
 async function readClaimsFile(filename){
     const workbook = new Excel.Workbook();
     await workbook.xlsx.readFile(filename);
 
-    let routes = [];
+    claims = [];
 
     workbook.worksheets.forEach(function(sheet) {
         // read first row as data keys
@@ -127,27 +132,27 @@ async function readClaimsFile(filename){
 
             let routeIdColIndex = keys.findIndex(x => x == 'ROUTE_ID');
             let routeId = values[routeIdColIndex];
-            let existingRouteIndex = routes.findIndex(route => route.id == routeId);            
+            let existingRouteIndex = claims.findIndex(route => route.id == routeId);            
 
             if (existingRouteIndex != -1) {                                                
-                routes[existingRouteIndex].claims.push(claim);
+                claims[existingRouteIndex].claims.push(claim);
             } else {
                 let route = {};
                 route.id = routeId;
                 route.claims = [];
                 route.claims.push(claim);
-                routes.push(route);
+                claims.push(route);
             }            
         })
     }); 
 
-    await saveClaims(routes);
+    await saveClaims(claims);
 }
 
-async function saveClaims(routes) {    
+async function saveClaims(claims) {    
     const client = await new MongoClient(dbConfig.connectionString).connect();
 
-    await routes.forEach(async function(route) {
+    await claims.forEach(async function(claim) {
         
         //const route = await client.db("vetor-transportes-backend").collection('shippings').findOne({ id: claim.ROUTE_ID });                
 
@@ -163,8 +168,8 @@ async function saveClaims(routes) {
             
             // validate
             client.db("vetor-transportes-backend").collection('shippings').updateOne(
-                { id: route.id },
-                { $addToSet: { claims: route.claims } },
+                { id: claim.id },
+                { $addToSet: { claims: claim.claims } },
                 { upsert: true },
                 async function (err, item) {
                     if (err)

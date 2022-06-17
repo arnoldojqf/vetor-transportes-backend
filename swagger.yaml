@@ -698,6 +698,26 @@ paths:
                       example: "2020-05-08T03:11:21.553Z"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
+  /jobs/importRoutes:
+    post:
+      summary: Import routes from MELI Logistics
+      description: Import routes from MELI Logistics.
+      operationId: importRoutes
+      requestBody:
+        required: false
+      responses:
+        "200":
+          description: List of imported routes
+  /jobs/importClaims:
+    post:
+      summary: Import claims from MELI Logistics Excel
+      description: Import claims from MELI Logistics Excel.
+      operationId: importClaims
+      requestBody:
+        required: false
+      responses:
+        "200":
+          description: List of imported claims
 
 components:
   securitySchemes:
