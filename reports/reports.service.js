@@ -37,12 +37,20 @@ async function getLogisticsAnalitico() {
     try {
         const client = await new MongoClient(dbConfig.connectionString).connect();
 
-        const pipeline = [
+        const pipeline = [     
+            { 
+                $match: {
+                    "initDate": {
+                        $gte: toTimestamp(new Date(new Date().setHours(00, 00, 00))),
+                        $lte: toTimestamp(new Date(new Date().setHours(23, 59, 59))),
+                    }
+                } 
+            },               
             {
                 $group :
                 { 
                     _id : {
-                        facilityId: "$facilityId", 
+                        driverName: "$driver.driverName", 
                         dtInitDate: { 
                             $dateToString : { 
                                 format: "%Y-%m-%d", 
@@ -52,46 +60,62 @@ async function getLogisticsAnalitico() {
                             }
                         },
                     }, 
+                    count: { $sum: 1 },
+                    total: { $sum: "$counters.total" },
+                    delivered: { $sum: "$counters.delivered" },
+                    notDelivered: { $sum: "$counters.notDelivered" },
+                    pending: { $sum: "$counters.pending" },
                     shipments: {
                         $push: {
                             facilityId: "$facilityId",
-                            driverName: "$driver.driverName",
-                            carrier: "$carrier",
-                            initDate: "$initDate",
+                            driverName: "$driver.driverName",                            
+                            carrier: "$carrier",                            
                             dtInitDate: { 
                                 $dateToString : { 
                                     format: "%Y-%m-%d", 
                                     date: {
-                                        "$toDate": {"$toLong": { $multiply: [ "$initDate", 1000 ] } } 
+                                        "$toDate": {"$toLong": { $multiply: [ "$initDate", 1000 ] } }
                                     }
                                 }
                             },
-                            dtFinalDate: {
-                                $dateToString : { 
-                                    format: "%Y-%m-%d", 
-                                    date: { 
-                                        "$toDate": {"$toLong": { $multiply: [ "$finalDate", 1000 ] } } 
-                                    }
-                                }
-                            },
-                            total : "$counters.total",
-                            delivered : "$counters.delivered",
-                            notDelivered : "$counters.notDelivered",
-                            pending : "$counters.pending",
+                            // dtFinalDate: {
+                            //     $dateToString : { 
+                            //         format: "%Y-%m-%d", 
+                            //         date: { 
+                            //             "$toDate": {"$toLong": { $multiply: [ "$finalDate", 1000 ] } } 
+                            //         }
+                            //     }
+                            // },
                         } 
-                    }
+                    },
+                }                
+            },            
+            // {
+            //     $group : 
+            //     {
+            //         _id : "$shipments",
+            //         count: "$count"
+                //    shipments: 
+                //    {
+                //     $push:
+                //     {
+                //         shipments: "$shipments",
+                //         $each: "$count"}
+                //    }
+           //     }
+            //},
+            { $unwind: "$shipments" },
+            {
+                $addFields: {
+                   "shipments.count": "$count",
+                   "shipments.total": "$total",
+                   "shipments.delivered": "$delivered",
+                   "shipments.notDelivered": "$notDelivered",
+                   "pending.count": "$pending"                   
                 }
             },
-            { 
-                $match: {
-                    "shipments.initDate": {
-                        $gte: toTimestamp(new Date(new Date().setHours(00, 00, 00))),
-                        $lte: toTimestamp(new Date(new Date().setHours(23, 59, 59))),
-                    },
-                } 
-            },
-            { $unwind: "$shipments" },   
-            { $replaceRoot: { newRoot: "$shipments" } }
+            { $group : { _id : "$shipments" } },
+            { $replaceRoot: { newRoot: "$_id" } }
             // { 
             //     $project : { 
             //     _id : 0, 
