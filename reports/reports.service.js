@@ -88,8 +88,8 @@ async function getLogisticsAnalitico() {
             },
             {
                 $addFields: {                                      
-                   "ds": { $divide: [ "$delivered", "$total" ] },                   
-                   "pnr": { $divide: [ "$delivered", "$total" ] }, // claims
+                   "ds": { $cond: { if: { $eq:  ["$total", 0] }, then: 0, else: { $divide: [ "$delivered", "$total" ] } } },                   
+                   "pnr": { $cond: { if: { $eq:  ["$total", 0] }, then: 0, else: { $divide: [ "$delivered", "$total" ] } } }, // claims
                    "cycle": { 
                         $cond: { 
                             if: { $lte: [ "$hourInitDate" , 13 ] }, 
@@ -122,7 +122,7 @@ async function getLogisticsAnalitico() {
             {
                 $addFields: {
                    "shipments.routes": "$routes",
-                   "shipments.spr": { $divide: [ "$totalPackages", "$routes" ] },
+                   "shipments.spr": { $cond: { if: { $eq:  ["$routes", 0] }, then: 0, else: { $divide: [ "$totalPackages", "$routes" ] } } },
                 }
             },            
             { $group : { _id : "$shipments" } },
