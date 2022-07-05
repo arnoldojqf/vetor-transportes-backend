@@ -45,101 +45,153 @@ async function getLogisticsAnalitico() {
                         $lte: toTimestamp(new Date(new Date().setHours(23, 59, 59))),
                     }
                 } 
-            },               
+            },                           
+            {
+                $project : {
+                    driverName: "$driver.driverName", 
+                    dtInitDate: { 
+                        $dateToString : { 
+                            format: "%Y-%m-%d", 
+                            date: {
+                                "$toDate": {"$toLong": { $multiply: [ "$initDate", 1000 ] } } 
+                            }
+                        }
+                    },                        
+                    facilityId: "$facilityId",
+                    routeId: "$id",                        
+                    carrier: "$carrier",                            
+                    strInitDate: { 
+                        $dateToString : { 
+                            format: "%d/%m/%Y %H:%M:%S", 
+                            date: {
+                                "$toDate": {"$toLong": { $multiply: [ "$initDate", 1000 ] } }
+                            }
+                        }
+                    },
+                    hourInitDate: { 
+                        $toInt: { 
+                            $dateToString : { 
+                                format: "%H", 
+                                date: {
+                                    "$toDate": {"$toLong": { $multiply: [ "$initDate", 1000 ] } }
+                                }
+                            }
+                        }
+                    },
+                    total: "$counters.total",
+                    delivered: "$counters.delivered",
+                    notDelivered: "$counters.notDelivered",
+                    pending: "$counters.pending",
+                    orh: "$timingData.orh",
+                    stops: "$details.stops"
+                }                
+            },
+            {
+                $addFields: {                                      
+                   "ds": { $divide: [ "$delivered", "$total" ] },                   
+                   "pnr": { $divide: [ "$delivered", "$total" ] }, // claims
+                   "cycle": { 
+                        $cond: { 
+                            if: { $lte: [ "$hourInitDate" , 13 ] }, 
+                                then: "AM", else: "PM" 
+                        }                                
+                    },
+                }
+            },
+            {
+                $addFields: {
+                   "orhMax": { $cond: { if: { $eq: [ "$cycle", "AM" ] }, then: 528, else: 360 } },
+                }
+            },
             {
                 $group :
                 { 
                     _id : {
-                        driverName: "$driver.driverName", 
-                        dtInitDate: { 
-                            $dateToString : { 
-                                format: "%Y-%m-%d", 
-                                date: {
-                                    "$toDate": {"$toLong": { $multiply: [ "$initDate", 1000 ] } } 
-                                }
-                            }
-                        },
+                        driverName: "$driverName", 
+                        dtInitDate: "$dtInitDate",
+                        
                     }, 
-                    count: { $sum: 1 },
-                    total: { $sum: "$counters.total" },
-                    delivered: { $sum: "$counters.delivered" },
-                    notDelivered: { $sum: "$counters.notDelivered" },
-                    pending: { $sum: "$counters.pending" },
+                    routes: { $sum: 1 },
+                    totalPackages: { $sum: "$total" },
                     shipments: {
-                        $push: {
-                            facilityId: "$facilityId",
-                            driverName: "$driver.driverName",                            
-                            carrier: "$carrier",                            
-                            dtInitDate: { 
-                                $dateToString : { 
-                                    format: "%Y-%m-%d", 
-                                    date: {
-                                        "$toDate": {"$toLong": { $multiply: [ "$initDate", 1000 ] } }
-                                    }
-                                }
-                            },
-                            // dtFinalDate: {
-                            //     $dateToString : { 
-                            //         format: "%Y-%m-%d", 
-                            //         date: { 
-                            //             "$toDate": {"$toLong": { $multiply: [ "$finalDate", 1000 ] } } 
-                            //         }
-                            //     }
-                            // },
-                        } 
+                        $push:  "$$ROOT"
                     },
                 }                
-            },            
-            // {
-            //     $group : 
-            //     {
-            //         _id : "$shipments",
-            //         count: "$count"
-                //    shipments: 
-                //    {
-                //     $push:
-                //     {
-                //         shipments: "$shipments",
-                //         $each: "$count"}
-                //    }
-           //     }
-            //},
+            },
             { $unwind: "$shipments" },
             {
                 $addFields: {
-                   "shipments.count": "$count",
-                   "shipments.total": "$total",
-                   "shipments.delivered": "$delivered",
-                   "shipments.notDelivered": "$notDelivered",
-                   "pending.count": "$pending"                   
+                   "shipments.routes": "$routes",
+                   "shipments.spr": { $divide: [ "$totalPackages", "$routes" ] },
+                }
+            },            
+            { $group : { _id : "$shipments" } },
+            { $replaceRoot: { newRoot: "$_id" } },
+            { $unwind: "$stops" },
+            { $unwind: "$stops.orders" },
+            { $unwind: "$stops.orders.transportUnits" },
+            {
+                $addFields: {
+                  "stops.orders.transportUnits.shipment.dtInitDate": {
+                    "$toDate": {
+                      "$toLong": {
+                        $multiply: [
+                          "$stops.orders.transportUnits.shipment.timestamp",
+                          1000
+                        ]
+                      }
+                    }
+                  },
+                  
                 }
             },
-            { $group : { _id : "$shipments" } },
+            {
+                $setWindowFields: {
+                  partitionBy: null,
+                  sortBy: {
+                    "stops.orders.transportUnits.shipment.dtInitDate": 1
+                  },
+                  output: {
+                    deliveredPerHour: {
+                      $count: {},
+                      window: {
+                        range: [ "unbounded", 60 ],
+                        unit: "minute"
+                      }
+                    }
+                  }
+                }
+            },            
+            {
+                $unset: "stops"
+            },
+            {
+                $group: {
+                    _id: {
+                        driverName: "$driverName",
+                        dtInitDate: "$dtInitDate",                
+                    },
+                    sumDeliveredPerHour: { $sum: "$deliveredPerHour" },
+                    shipments: {
+                        $push: "$$ROOT"
+                    }
+                }
+            },            
+            { $unwind: "$shipments" },
+            {
+                $unset: "shipments.deliveredPerHour"
+            },
+            {
+                $addFields: {
+                   "shipments.dpph": { $cond: { if: { $eq:  ["$shipments.orh", 0] }, then: 0, else: { $divide: [ "$sumDeliveredPerHour", "$shipments.orh" ] } } },
+                }
+            },            
+            {
+                $group: {
+                    _id: "$shipments"
+                }
+            },
             { $replaceRoot: { newRoot: "$_id" } }
-            // { 
-            //     $project : { 
-            //     _id : 0, 
-            //     facilityId: "$shipments.facilityId",
-            //     // "shipments.driverName": 1,
-            //     // "shipments.carrier": 1,
-            //     // "shipments.initDate": 1,
-            //     // "shipments.dtInitDate": 1,
-            //     // "shipments.dtFinalDate": 1,
-            //     // "shipments.total" : 1,
-            //     // "shipments.delivered" : 1,
-            //     // "shipments.notDelivered" : 1,
-            //     // "shipments.pending" : 1,
-            //     } 
-            // },
-            // {
-            //     $addFields: {                                        
-            //         dtFinalDate: { "$toDate": {"$toLong": { $multiply: [ "$finalDate", 1000 ] } } },
-            //         total : { $sum: "$counters.total" },
-            //         delivered : { $sum: "$counters.delivered" },
-            //         notDelivered : { $sum: "$counters.notDelivered" },
-            //         pending : { $sum: "$counters.pending" },
-            //     }
-            // }
         ];
 
         result = await client.db("vetor-transportes-backend").collection('shippings').aggregate(pipeline).toArray();
