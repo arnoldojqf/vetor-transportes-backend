@@ -38,14 +38,14 @@ async function getLogisticsAnalitico() {
         const client = await new MongoClient(dbConfig.connectionString).connect();
 
         const pipeline = [     
-            { 
-                $match: {
-                    "initDate": {
-                        $gte: toTimestamp(new Date(new Date().setHours(00, 00, 00))),
-                        $lte: toTimestamp(new Date(new Date().setHours(23, 59, 59))),
-                    }
-                } 
-            },                           
+            // { 
+            //     $match: {
+            //         "initDate": {
+            //             $gte: toTimestamp(new Date(new Date().setHours(00, 00, 00))),
+            //             $lte: toTimestamp(new Date(new Date().setHours(23, 59, 59))),
+            //         }
+            //     } 
+            // },                           
             {
                 $project : {
                     driverName: "$driver.driverName", 
@@ -83,7 +83,8 @@ async function getLogisticsAnalitico() {
                     notDelivered: "$counters.notDelivered",
                     pending: "$counters.pending",
                     orh: "$timingData.orh",
-                    stops: "$details.stops"
+                    stops: "$details.stops",
+                    claimsData:"$claimsData"
                 }                
             },
             {
@@ -118,7 +119,7 @@ async function getLogisticsAnalitico() {
                     },
                 }                
             },
-            { $unwind: "$shipments" },
+            { $unwind: { path: "$shipments", preserveNullAndEmptyArrays: true } },
             {
                 $addFields: {
                    "shipments.routes": "$routes",
@@ -127,16 +128,16 @@ async function getLogisticsAnalitico() {
             },            
             { $group : { _id : "$shipments" } },
             { $replaceRoot: { newRoot: "$_id" } },
-            { $unwind: "$stops" },
-            { $unwind: "$stops.orders" },
-            { $unwind: "$stops.orders.transportUnits" },
+            { $unwind: { path: "$stops", preserveNullAndEmptyArrays: true } },
+            { $unwind: { path: "$stops.orders", preserveNullAndEmptyArrays: true } },
+            { $unwind: { path: "$stops.orders.transportUnits", preserveNullAndEmptyArrays: true } },
             {
                 $addFields: {
                   "stops.orders.transportUnits.shipment.dtInitDate": {
                     "$toDate": {
                       "$toLong": {
                         $multiply: [
-                          "$stops.orders.transportUnits.shipment.timestamp",
+                            { $ifNull: ["$stops.orders.transportUnits.shipment.timestamp", 0] },
                           1000
                         ]
                       }
@@ -176,8 +177,8 @@ async function getLogisticsAnalitico() {
                         $push: "$$ROOT"
                     }
                 }
-            },            
-            { $unwind: "$shipments" },
+            },       
+            { $unwind: { path: "$shipments", preserveNullAndEmptyArrays: true } },
             {
                 $unset: "shipments.deliveredPerHour"
             },
@@ -191,10 +192,11 @@ async function getLogisticsAnalitico() {
                     _id: "$shipments"
                 }
             },
-            { $replaceRoot: { newRoot: "$_id" } }
+            { $replaceRoot: { newRoot: "$_id" } },
+            { $unwind: { path: "$claimsData", preserveNullAndEmptyArrays: true } },
         ];
 
-        result = await client.db("vetor-transportes-backend").collection('shippings').aggregate(pipeline).toArray();
+        result = await client.db("vetor-transportes-backend").collection('shippings').aggregate(pipeline, { allowDiskUse: true }).toArray();
 
         console.log('result', result);
 

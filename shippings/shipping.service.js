@@ -138,7 +138,7 @@ async function readClaimsFile(filename){
                 claims[existingRouteIndex].claims.push(claim);
             } else {
                 let route = {};
-                route.id = routeId;
+                route.id = "" + routeId + "";
                 route.claims = [];
                 route.claims.push(claim);
                 claims.push(route);
@@ -169,7 +169,7 @@ async function saveClaims(claims) {
             // validate
             client.db("vetor-transportes-backend").collection('shippings').updateOne(
                 { id: claim.id },
-                { $addToSet: { claims: claim.claims } },
+                { $addToSet: { claimsData: claim.claims } },
                 { upsert: true },
                 async function (err, item) {
                     if (err)
