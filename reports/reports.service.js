@@ -89,19 +89,38 @@ async function getLogisticsAnalitico() {
             },
             {
                 $addFields: {                                      
-                   "ds": { $cond: { if: { $eq:  ["$total", 0] }, then: 0, else: { $divide: [ "$delivered", "$total" ] } } },                   
-                   "pnr": { $cond: { if: { $eq:  ["$total", 0] }, then: 0, else: { $divide: [ "$delivered", "$total" ] } } }, // claims
+                   "ds": { 
+                            $cond: { 
+                                if: { $eq:  ["$total", 0] }, 
+                                then: 0,
+                                else: { $divide: [ "$delivered", "$total" ] } 
+                            } 
+                        },                   
+                   "pnr": { 
+                            $cond: { 
+                                if: { $eq:  ["$total", 0] }, 
+                                then: 0, 
+                                else: { $divide: [ "$delivered", "$total" ] } 
+                            } 
+                        }, // claims
                    "cycle": { 
                         $cond: { 
                             if: { $lte: [ "$hourInitDate" , 13 ] }, 
-                                then: "AM", else: "PM" 
+                            then: "AM", 
+                            else: "PM" 
                         }                                
                     },
                 }
             },
             {
                 $addFields: {
-                   "orhMax": { $cond: { if: { $eq: [ "$cycle", "AM" ] }, then: 528, else: 360 } },
+                   "orhMax": { 
+                                $cond: { 
+                                    if: { $eq: [ "$cycle", "AM" ] }, 
+                                    then: 528, 
+                                    else: 360 
+                                } 
+                            },
                 }
             },
             {
@@ -123,7 +142,13 @@ async function getLogisticsAnalitico() {
             {
                 $addFields: {
                    "shipments.routes": "$routes",
-                   "shipments.spr": { $cond: { if: { $eq:  ["$routes", 0] }, then: 0, else: { $divide: [ "$totalPackages", "$routes" ] } } },
+                   "shipments.spr": { 
+                                        $cond: { 
+                                            if: { $eq:  ["$routes", 0] }, 
+                                            then: 0, 
+                                            else: { $divide: [ "$totalPackages", "$routes" ] } 
+                                        } 
+                                    },
                 }
             },            
             { $group : { _id : "$shipments" } },
@@ -184,16 +209,60 @@ async function getLogisticsAnalitico() {
             },
             {
                 $addFields: {
-                   "shipments.dpph": { $cond: { if: { $eq:  ["$shipments.orh", 0] }, then: 0, else: { $divide: [ "$sumDeliveredPerHour", "$shipments.orh" ] } } },
+                   "shipments.dpph": { 
+                        $cond: { 
+                            if: { $eq:  ["$shipments.orh", 0] }, 
+                            then: 0,
+                            else: { $divide: [ "$sumDeliveredPerHour", "$shipments.orh" ] } 
+                        } 
+                    },
                 }
             },            
             {
-                $group: {
-                    _id: "$shipments"
-                }
+                $group: { _id: "$shipments" }
             },
             { $replaceRoot: { newRoot: "$_id" } },
             { $unwind: { path: "$claimsData", preserveNullAndEmptyArrays: true } },
+            { 
+                $addFields: { 
+                    claimsData: { 
+                        $map: { 
+                            input: "$claimsData", 
+                            as: "claim", 
+                            in: {
+                                $mergeObjects: [ 
+                                    "$$claim",  
+                                    { 
+                                        dtClaimOpen: { 
+                                            $dateToString : { format: "%d/%m/%Y %H:%M:%S", date: "$$claim.CLAIM_OPENED_DATE" }
+                                        } 
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    cntClaims: { 
+                        $cond:
+                        {
+                          if: { $isArray: "$claimsData" },
+                          then: { $size:"$claimsData" },
+                          else: 0
+                        }
+                    },                   
+                }
+            },
+            {
+                $addFields: {
+                    contactRate: { 
+                        $cond:
+                        {
+                          if: { $eq: ["$total", 0] },
+                          then: 0,
+                          else: { $divide: ["$cntClaims", "$total"] }
+                        }
+                    },
+                }
+            }
         ];
 
         result = await client.db("vetor-transportes-backend").collection('shippings').aggregate(pipeline, { allowDiskUse: true }).toArray();
