@@ -49,6 +49,7 @@ async function getLogisticsAnalitico() {
             {
                 $project : {
                     driverName: "$driver.driverName", 
+                    tsInitDate: { "$toLong": { $multiply: [ "$initDate", 1000 ] } }, 
                     dtInitDate: { 
                         $dateToString : { 
                             format: "%Y-%m-%d", 
