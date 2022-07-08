@@ -93,8 +93,8 @@ async function getLogisticsAnalitico() {
                    "ds": { 
                             $cond: { 
                                 if: { $eq:  ["$total", 0] }, 
-                                then: 0,
-                                else: { $divide: [ "$delivered", "$total" ] } 
+                                then: "0%",
+                                else: { $concat: [ { $substr: [ { $multiply: [ { $divide: [ "$delivered", "$total" ] }, 100] }, 0, 4 ] }, "%" ] }
                             } 
                         },                   
                    "pnr": { 
@@ -106,10 +106,10 @@ async function getLogisticsAnalitico() {
                         }, // claims
                    "cycle": { 
                         $cond: { 
-                            if: { $lte: [ "$hourInitDate" , 13 ] }, 
-                            then: "AM", 
-                            else: "PM" 
-                        }                                
+                            if: { $gt: [ "$hourInitDate" , 12 ] }, 
+                            then: "PM", 
+                            else: "AM" 
+                        }
                     },
                 }
             },
@@ -122,6 +122,11 @@ async function getLogisticsAnalitico() {
                                     else: 360 
                                 } 
                             },
+                }
+            },
+            {
+                $addFields: {
+                   "pOrh": { $concat: [ { $substr: [ { $multiply: [ { $divide: [ "$orh", "$orhMax" ] }, 100] }, 0, 4 ] }, "%" ] },
                 }
             },
             {
@@ -174,19 +179,19 @@ async function getLogisticsAnalitico() {
             },
             {
                 $setWindowFields: {
-                  partitionBy: null,
-                  sortBy: {
-                    "stops.orders.transportUnits.shipment.dtInitDate": 1
-                  },
-                  output: {
-                    deliveredPerHour: {
-                      $count: {},
-                      window: {
-                        range: [ "unbounded", 60 ],
-                        unit: "minute"
-                      }
+                    partitionBy: "$routeId",
+                    sortBy: {
+                        "stops.orders.transportUnits.shipment.dtInitDate": 1
+                    },
+                    output: {
+                        deliveredPerHour: {
+                        $sum: 1,
+                        window: {
+                            range: [ "unbounded", 60 ],
+                            unit: "minute"
+                        }
+                        }
                     }
-                  }
                 }
             },            
             {
@@ -195,19 +200,18 @@ async function getLogisticsAnalitico() {
             {
                 $group: {
                     _id: {
-                        driverName: "$driverName",
-                        dtInitDate: "$dtInitDate",                
+                        routeId: "$routeId",
                     },
-                    sumDeliveredPerHour: { $sum: "$deliveredPerHour" },
+                    deliveredPerHour: { $max: "$deliveredPerHour" },
                     shipments: {
                         $push: "$$ROOT"
                     }
                 }
             },       
             { $unwind: { path: "$shipments", preserveNullAndEmptyArrays: true } },
-            {
-                $unset: "shipments.deliveredPerHour"
-            },
+            // {
+            //     $unset: "shipments.sumDeliveredPerHour"
+            // },
             {
                 $addFields: {
                    "shipments.dpph": { 
