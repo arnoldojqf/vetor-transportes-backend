@@ -164,69 +164,86 @@ async function getLogisticsAnalitico() {
             { $unwind: { path: "$stops.orders.transportUnits", preserveNullAndEmptyArrays: true } },
             {
                 $addFields: {
-                  "stops.orders.transportUnits.shipment.dtInitDate": {
-                    "$toDate": {
-                      "$toLong": {
-                        $multiply: [
-                            { $ifNull: ["$stops.orders.transportUnits.shipment.timestamp", 0] },
-                          1000
-                        ]
+                    "dtDelivery": {
+                      "$toDate": {
+                        "$toLong": {
+                          $multiply: [
+                            "$stops.orders.transportUnits.shipment.timestamp",
+                            1000
+                          ]
+                        }
                       }
-                    }
-                  },
-                  
-                }
-            },
-            {
-                $setWindowFields: {
-                    partitionBy: "$routeId",
-                    sortBy: {
-                        "stops.orders.transportUnits.shipment.dtInitDate": 1
                     },
-                    output: {
-                        deliveredPerHour: {
-                        $sum: 1,
-                        window: {
-                            range: [ "unbounded", 60 ],
-                            unit: "minute"
-                        }
-                        }
-                    }
                 }
-            },            
-            {
-                $unset: "stops"
             },
             {
                 $group: {
                     _id: {
-                        routeId: "$routeId",
+                      routeId: "$routeId",
                     },
-                    deliveredPerHour: { $max: "$deliveredPerHour" },
-                    shipments: {
-                        $push: "$$ROOT"
-                    }
+                    fisrtDateDeliveryByDay: { $min: "$dtDelivery" },
+                    shipments: {$push: "$$ROOT"}
                 }
-            },       
-            { $unwind: { path: "$shipments", preserveNullAndEmptyArrays: true } },
-            // {
-            //     $unset: "shipments.sumDeliveredPerHour"
-            // },
+            },
             {
                 $addFields: {
-                   "shipments.dpph": { 
-                        $cond: { 
-                            if: { $eq:  ["$shipments.orh", 0] }, 
-                            then: 0,
-                            else: { $divide: [ "$sumDeliveredPerHour", "$shipments.orh" ] } 
-                        } 
-                    },
-                }
-            },            
-            {
-                $group: { _id: "$shipments" }
+                    "shipments.fisrtDateDeliveryByDay": "$fisrtDateDeliveryByDay",
+                  }
             },
+            { $unwind: { path: "$shipments", preserveNullAndEmptyArrays: true } },
+            { $group: { _id: "$shipments", } },
             { $replaceRoot: { newRoot: "$_id" } },
+            {
+                $group: {
+                    _id: {
+                      routeId: "$routeId",
+                      interval: {
+                        $subtract: [
+                          "$dtDelivery",
+                            {
+                              $mod: [
+                                {
+                                  $subtract: [
+                                        "$dtDelivery",
+                                        "$fisrtDateDeliveryByDay"
+                                        ]
+                                }
+                                ,
+                                60 * 60 * 1000,
+                              ]
+                            }
+                          ]
+                      }
+                    },
+                    deliveredPerHour: { $sum: 1 },
+                    shipments: {$push: "$$ROOT"}
+                }
+            },       
+            {
+                $addFields: {
+                    "shipments.deliveredPerHour": "$deliveredPerHour",
+                  }
+            },
+            { $unwind: { path: "$shipments", preserveNullAndEmptyArrays: true } },
+            { $group: { _id: "$shipments", } },
+            { $replaceRoot: { newRoot: "$_id" } },
+            {
+                $group:
+               {
+                 _id: "$routeId",
+                  dpph: { $avg: "$deliveredPerHour" },
+                  shipments: {$push: "$$ROOT"}
+               }
+            },
+            {
+                $addFields: {                    
+                    "shipments.dpph": { $substr: ["$dpph" , 0, 4 ] }
+                  }
+            },    
+            { $unwind: { path: "$shipments", preserveNullAndEmptyArrays: true } },
+            { $unset: ["shipments.stops","shipments.dtDelivery","shipments.fisrtDateDeliveryByDay","shipments.deliveredPerHour"] },
+            { $group: { _id: "$shipments", } },
+            { $replaceRoot: { newRoot: "$_id" } },            
             { $unwind: { path: "$claimsData", preserveNullAndEmptyArrays: true } },
             { 
                 $addFields: { 
