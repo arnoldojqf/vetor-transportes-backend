@@ -60,6 +60,7 @@ async function getLogisticsAnalitico() {
                     },                        
                     facilityId: "$facilityId",
                     routeId: "$id",                        
+                    operation: "$operation",                        
                     carrier: "$carrier",                            
                     strInitDate: { 
                         $dateToString : { 

@@ -718,6 +718,63 @@ paths:
       responses:
         "200":
           description: List of imported claims
+  /tenants:
+    get:
+      summary: Get a tenant by id
+      description: Get a tenant by id
+      operationId: getById
+      responses:
+        "200":
+          description: A tenant object
+    post:
+      summary: Create/update a tenant
+      description:
+      operationId: save
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  example: "a9614ff1-f7cd-4cea-9386-b629db639065"
+                name:
+                  type: string
+                  example: "Vetor Transportes"
+                dataSources:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      entity:
+                        type: string
+                        example: "routes"
+                      provider:
+                        type: string
+                        example: "meli"                      
+                      type:
+                        type: string
+                        example: "rest"
+                      method:
+                        type: string
+                        example: "fetch"
+                      protocol:
+                        type: string
+                        example: "https"
+                      domain:
+                        type: string
+                        example: "envios.mercadolivre.com.br"
+                      endpoint:
+                        type: string
+                        example: "logistics/api/routes?sc="
+                      operations:
+                        type: array
+                        example: ["SMG1", "SMG2", "SMG8", "SMG9", "SDF1", "SMS1"]
+      responses:
+        "200":
+          description: Tenant created/updated successfully.
 
 components:
   securitySchemes:

@@ -5,6 +5,7 @@ const crypto = require("crypto");
 const sendEmail = require('_helpers/send-email');
 const Role = require('_helpers/role');
 const fetchWrapper = require('_helpers/fetch-wrapper');
+const tenantService = require('tenants/tenants.service');
 
 const shippings = {}
 const dbConfig = require('config.json');
@@ -12,6 +13,7 @@ const { MongoClient } = require("mongodb");
 const ObjectId = require('mongodb').ObjectID;
 const Excel = require('exceljs');
 var claims = [];
+var importedRoutes = [];
 
 module.exports = {
     list,
@@ -33,52 +35,88 @@ async function list () {
   })
 }
 
-async function importRoutes(operation) {
-    const client = await new MongoClient(dbConfig.connectionString).connect();
+async function importRoutes() {
     
-    //const routes = await fetchWrapper.get("https://envios.mercadolivre.com.br/logistics/api/routes?sc=SMG1");
-    const routes = await fetchWrapper.get("https://envios.mercadolivre.com.br/logistics/api/routes?sc=" + operation);
+    console.log('config.tenantId', config.tenantId);
 
-    await routes.forEach(async function(data) {        
+    const tenant = await tenantService.getById(config.tenantId);
 
-        const updateDocument = {
-            $set: data
-         };
+    if (!tenant) {
+        return null;
+    }
+
+    console.log('tenant: ', tenant);
+
+    const dataSource = tenant.dataSources.find(ds => ds.entity === "routes");
+
+    if (!dataSource) {
+        return null;
+    }
+
+    console.log('dataSource: ', dataSource);
+
+    importedRoutes = [];    
+
+    const operations = dataSource.operations;
+
+    console.log('operations: ', operations);
+
+    const url = "https://envios.mercadolivre.com.br/logistics/api/routes?sc=";
+
+    //await operations.forEach(async function(operation) {
+        for (const operation of operations) {        
         
-        // validate
-        await client.db("vetor-transportes-backend").collection('shippings').updateOne({ id: data.id }, updateDocument, { upsert: true }, async function (err, item) {
+        const client = await new MongoClient(dbConfig.connectionString).connect();
 
-            if (err)
-                return console.log('Erro ao inserir/atualizar a colecao shippings na DB: ', err);
+        console.log('url: ', url + operation);
+        
+        const routes = await fetchWrapper.get(url + operation);            
 
-            if (item)
-                importRouteDetails(data.id);                
-        });            
-    });    
+        for (const route of routes) {
 
-    //await client.close();
-    
-    console.log('routes: ', routes);
+            route.operation = operation;
 
-    return routes;
+            const updateDocument = {
+                $set: route
+            };
+            
+            client.db("vetor-transportes-backend").collection('shippings')
+            .updateOne(
+                { id: route.id }, 
+                updateDocument, 
+                { upsert: true }, 
+                async (err, item) => {
+                    if (err)
+                        return console.log('Erro ao inserir/atualizar a colecao shippings na DB: ', err);
+
+                    if (item)
+                        importedRoutes.push(route);
+                        await importRouteDetails(route.id);                
+                }
+            );            
+        }
+    };    
+
+    console.log('imported routes: ', importedRoutes);
+
+    return importedRoutes;
 }
 
 async function importRouteDetails(id) {
     const client = await new MongoClient(dbConfig.connectionString).connect();
+
+    const url = "https://envios.mercadolivre.com.br/logistics/api/routes/" + id;
     
-    const detailsData = await fetchWrapper.get("https://envios.mercadolivre.com.br/logistics/api/routes/" + id);
+    const detailsData = await fetchWrapper.get(url);
     
-    // validate
-    await client.db("vetor-transportes-backend").collection('shippings').findOne({ id: id }, async function (err, item) {
+    client.db("vetor-transportes-backend").collection('shippings').findOne({ id: id }, async function (err, item) {
 
         if (err)
             return console.log('Erro ao procurar na colecao shippings na DB: ', err);
 
         if (item)
             await update({ id:  id}, { $set: { details: detailsData }});
-    });
-    
-    return detailsData.length;
+    });        
 }
 
 async function importClaims() {
@@ -195,9 +233,10 @@ async function edit() {
 async function update(whereQuery, setData) {
     const client = await new MongoClient(dbConfig.connectionString).connect();
 
-    await client.db("vetor-transportes-backend").collection('shippings').updateOne(whereQuery, setData, function (err, docs) {
+    client.db("vetor-transportes-backend").collection('shippings')
+    .updateOne(whereQuery, setData, (err, docs) => {
         if (err) return console.log('Error updating data to DB: ', err);
-      });
+    });
 }
 
 async function _delete() {

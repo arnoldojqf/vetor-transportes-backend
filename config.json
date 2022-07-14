@@ -1,5 +1,5 @@
 ﻿{
-    "appId": "a9614ff1-f7cd-4cea-9386-b629db639065",
+    "tenantId": "a9614ff1-f7cd-4cea-9386-b629db639065",
     "connectionString": "mongodb://localhost:27017/vetor-transportes-backend",
     "dbUrl": "mongodb://localhost:27017/",
     "secret": "687bf504-4ce7-4f7a-b44b-c52c65f3dc82",
