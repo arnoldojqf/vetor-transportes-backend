@@ -33,10 +33,11 @@ async function list () {
   })
 }
 
-async function importRoutes() {
+async function importRoutes(operation) {
     const client = await new MongoClient(dbConfig.connectionString).connect();
     
-    const routes = await fetchWrapper.get("https://envios.mercadolivre.com.br/logistics/api/routes?sc=SMG1");              
+    //const routes = await fetchWrapper.get("https://envios.mercadolivre.com.br/logistics/api/routes?sc=SMG1");
+    const routes = await fetchWrapper.get("https://envios.mercadolivre.com.br/logistics/api/routes?sc=" + operation);
 
     await routes.forEach(async function(data) {        
 
