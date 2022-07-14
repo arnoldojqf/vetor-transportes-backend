@@ -771,7 +771,7 @@ paths:
                         example: "logistics/api/routes?sc="
                       operations:
                         type: array
-                        example: ["SMG1", "SMG2", "SMG8", "SMG9", "SDF1", "SMS1"]
+                        example: ["SMG1", "SMG2", "SMG8", "SMG9", "SDF1", "SMS1", "SMR1", "SES1", "SGO1"]
       responses:
         "200":
           description: Tenant created/updated successfully.
