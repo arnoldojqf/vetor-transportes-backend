@@ -15,29 +15,32 @@ const Excel = require('exceljs');
 var claims = [];
 var importedRoutes = [];
 
-module.exports = {
-    list,
+module.exports = {    
     importRoutes,
-    importClaims,
-    edit,
-    update,
-    _delete
+    importClaims,    
+    update,    
 };
 
-async function list () {
-  MongoClient.connect(dbConfig.dbUrl, { useNewUrlParser: true, useUnifiedTopology: true }, (err, client) => {
-    if (err) return console.log(err)
-    let db = client.db('vetor-transportes-backend')
-    db.collection('shippings').find().toArray().then(function (docs) {
-      client.close()
-      res.send(docs)
-    })
-  })
+async function getById(id) {
+    const client = await new MongoClient(dbConfig.connectionString).connect();
+
+    return client.db("vetor-transportes-backend").collection('shippings').findOne({ id: id });
+}
+
+async function update(filter, setData, upsert) {
+
+    const client = await new MongoClient(dbConfig.connectionString).connect();
+
+    if (upsert) {
+        return await client.db("vetor-transportes-backend").collection('shippings').updateOne(filter, setData, { upsert: true });
+    } else {
+        return await client.db("vetor-transportes-backend").collection('shippings').updateOne(filter, setData);
+    }    
 }
 
 async function importRoutes() {
     
-    console.log('config.tenantId', config.tenantId);
+    //console.log('config.tenantId', config.tenantId);
 
     const tenant = await tenantService.getById(config.tenantId);
 
@@ -45,7 +48,7 @@ async function importRoutes() {
         return null;
     }
 
-    console.log('tenant: ', tenant);
+    //console.log('tenant: ', tenant);
 
     const dataSource = tenant.dataSources.find(ds => ds.entity === "routes");
 
@@ -53,24 +56,25 @@ async function importRoutes() {
         return null;
     }
 
-    console.log('dataSource: ', dataSource);
+    //console.log('dataSource: ', dataSource);
 
     importedRoutes = [];    
 
     const operations = dataSource.operations;
 
-    console.log('operations: ', operations);
+    //console.log('operations: ', operations);
 
     const url = "https://envios.mercadolivre.com.br/logistics/api/routes?sc=";
 
-    //await operations.forEach(async function(operation) {
-        for (const operation of operations) {        
+    for (const operation of operations) {        
         
-        const client = await new MongoClient(dbConfig.connectionString).connect();
+        //const client = await new MongoClient(dbConfig.connectionString).connect();
 
-        console.log('url: ', url + operation);
+        //console.log('url: ', url + operation);
         
-        const routes = await fetchWrapper.get(url + operation);            
+        const routes = await fetchWrapper.get(url + operation);     
+        
+        console.log('routes: ', routes);
 
         for (const route of routes) {
 
@@ -80,43 +84,55 @@ async function importRoutes() {
                 $set: route
             };
             
-            client.db("vetor-transportes-backend").collection('shippings')
-            .updateOne(
-                { id: route.id }, 
-                updateDocument, 
-                { upsert: true }, 
-                async (err, item) => {
-                    if (err)
-                        return console.log('Erro ao inserir/atualizar a colecao shippings na DB: ', err);
+            await update({ id: route.id }, updateDocument, true);
 
-                    if (item)
-                        importedRoutes.push(route);
-                        await importRouteDetails(route.id);                
-                }
-            );            
+            importedRoutes.push(route);
+
+            await importRouteDetails(route.id);
+
+            // client.db("vetor-transportes-backend").collection('shippings')
+            // .updateOne(
+            //     { id: route.id }, 
+            //     updateDocument, 
+            //     { upsert: true }, 
+            //     async (err, item) => {
+            //         if (err)
+            //             return console.log('Erro ao inserir/atualizar a colecao shippings na DB: ', err);
+
+            //         if (item)
+            //             importedRoutes.push(route);
+            //             await importRouteDetails(route.id);                
+            //     }
+            // );            
         }
     };    
 
-    console.log('imported routes: ', importedRoutes);
+    //console.log('imported routes: ', importedRoutes);
 
     return importedRoutes;
 }
 
 async function importRouteDetails(id) {
-    const client = await new MongoClient(dbConfig.connectionString).connect();
+    //const client = await new MongoClient(dbConfig.connectionString).connect();
 
     const url = "https://envios.mercadolivre.com.br/logistics/api/routes/" + id;
     
     const detailsData = await fetchWrapper.get(url);
+
+    const route = await getById(id);
+
+    if(route){
+        await update({ id:  id}, { $set: { details: detailsData }});
+    }    
     
-    client.db("vetor-transportes-backend").collection('shippings').findOne({ id: id }, async function (err, item) {
+    // client.db("vetor-transportes-backend").collection('shippings').findOne({ id: id }, async function (err, item) {
 
-        if (err)
-            return console.log('Erro ao procurar na colecao shippings na DB: ', err);
+    //     if (err)
+    //         return console.log('Erro ao procurar na colecao shippings na DB: ', err);
 
-        if (item)
-            await update({ id:  id}, { $set: { details: detailsData }});
-    });        
+    //     if (item)
+    //         await update({ id:  id}, { $set: { details: detailsData }});
+    // });        
 }
 
 async function importClaims() {
@@ -126,13 +142,13 @@ async function importClaims() {
     //joining path of directory 
     const directoryPath = path.join(__dirname, 'data/claims_logistics');
     //passsing directoryPath and callback function
-    fs.readdir(directoryPath, function (err, files) {        
+    fs.readdir(directoryPath, async function (err, files) {        
         //handling error
         if (err) {
             return console.log('Unable to scan directory: ' + err);
         } 
-        //listing all files using forEach
-        files.forEach(async function (file) {
+        //listing all files using for loop
+        for (const file of files) {
             if (path.extname(file) != ".xlsx")
                 return;
 
@@ -140,10 +156,10 @@ async function importClaims() {
             
             // Do whatever you want to do with the file            
             await readClaimsFile(filePath);
-        });
+        }
     });  
 
-    console.log('claims: ', claims);
+    //console.log('claims: ', claims);
     
     return claims;
 }
@@ -153,12 +169,13 @@ async function readClaimsFile(filename){
     await workbook.xlsx.readFile(filename);
 
     claims = [];
-
-    workbook.worksheets.forEach(function(sheet) {
+        
+    for (const sheet of workbook.worksheets) {
         // read first row as data keys
         let firstRow = sheet.getRow(1);
         if (!firstRow.cellCount) return;
         let keys = firstRow.values;
+        
         sheet.eachRow((row, rowNumber) => {
             if (rowNumber == 1) return;
             
@@ -183,15 +200,16 @@ async function readClaimsFile(filename){
                 claims.push(route);
             }            
         })
-    }); 
+    }
 
     await saveClaims(claims);
 }
 
 async function saveClaims(claims) {    
-    const client = await new MongoClient(dbConfig.connectionString).connect();
+    //const client = await new MongoClient(dbConfig.connectionString).connect();
 
-    await claims.forEach(async function(claim) {
+    //await claims.forEach(async function(claim) {
+    for (const claim of claims) {
         
         //const route = await client.db("vetor-transportes-backend").collection('shippings').findOne({ id: claim.ROUTE_ID });                
 
@@ -205,50 +223,15 @@ async function saveClaims(claims) {
         // } else {
         //     console.log('update route id', claim.ROUTE_ID);            
             
-            // validate
-            client.db("vetor-transportes-backend").collection('shippings').updateOne(
-                { id: claim.id },
-                { $addToSet: { claimsData: claim.claims } },
-                { upsert: true },
-                async function (err, item) {
-                    if (err)
-                        return console.log('Erro ao inserir/atualizar claims na DB: ', err);            
-            });
+        await update({ id: claim.id }, { $addToSet: { claimsData: claim.claims } }, true);
+            // client.db("vetor-transportes-backend").collection('shippings').updateOne(
+            //     { id: claim.id },
+            //     { $addToSet: { claimsData: claim.claims } },
+            //     { upsert: true },
+            //     async function (err, item) {
+            //         if (err)
+            //             return console.log('Erro ao inserir/atualizar claims na DB: ', err);            
+            // });
         //}                    
-    });
-}
-
-async function edit() {
-  let id = req.params.id
-  MongoClient.connect(dbConfig.dbUrl, { useNewUrlParser: true, useUnifiedTopology: true }, (err, client) => {
-    if (err) return console.log(err)
-    let db = client.db('vetor-transportes-backend')
-    db.collection('shippings').find({ '_id': ObjectId(id) }).toArray().then(function (docs) {
-      client.close()
-      res.send(docs)
-    })
-  })
-}
-
-async function update(whereQuery, setData) {
-    const client = await new MongoClient(dbConfig.connectionString).connect();
-
-    client.db("vetor-transportes-backend").collection('shippings')
-    .updateOne(whereQuery, setData, (err, docs) => {
-        if (err) return console.log('Error updating data to DB: ', err);
-    });
-}
-
-async function _delete() {
-  let id = req.params.id
-  MongoClient.connect(dbConfig.dbUrl, { useNewUrlParser: true, useUnifiedTopology: true }, (err, client) => {
-    if (err) return console.log(err)
-    let db = client.db('vetor-transportes-backend')
-    let whereQuery = { _id: ObjectId(id) }
-    db.collection('shippings').deleteOne(whereQuery, function (err, docs) {
-      if (err) return console.log(err)
-      client.close()
-      res.send(docs)
-    })
-  })
+    }
 }

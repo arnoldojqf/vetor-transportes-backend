@@ -9,16 +9,9 @@ module.exports = {
 async function getById(id) {
     const client = await new MongoClient(dbConfig.connectionString).connect();
 
-    console.log('getById: ', id);
+    //console.log('getById: ', id);
 
-    return await client.db("vetor-transportes-backend").collection('tenants')
-        .findOne(
-            { id: id }, 
-            // (err, item) => {
-            //     if (err)
-            //         return console.log('Erro ao obter da colecao tenants na DB: ', err);                
-            // }
-        );        
+    return client.db("vetor-transportes-backend").collection('tenants').findOne({ id: id });
 }
 
 async function save(tenant) {
@@ -28,16 +21,5 @@ async function save(tenant) {
         $set: tenant
         };
     
-    await client.db("vetor-transportes-backend").collection('tenants')
-        .updateOne(
-            { "id": tenant.id }, 
-            updateDocument, 
-            { upsert: true }, 
-            async function (err, item) {
-                if (err)
-                    return console.log('Erro ao inserir/atualizar a colecao settings na DB: ', err);
-
-                return item;
-            }
-        );                    
+    await client.db("vetor-transportes-backend").collection('tenants').updateOne({ "id": tenant.id }, updateDocument, { upsert: true });                    
 }
