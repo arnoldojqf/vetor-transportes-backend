@@ -8,17 +8,13 @@ router.post('/', save);
 
 module.exports = router;
 
-function getById(req, res, next) {
-    console.log('getById: ', req.params.id);
-
+function getById(req, res, next) {    
     tenantService.getById(req.params.id)
             .then(data => res.json(data))
             .catch(next);
 }
 
 function save(req, res, next) {
-    console.log('save: ', req.body);
-
     tenantService.save(req.body)
         .then(data => res.json(data))
         .catch(next);

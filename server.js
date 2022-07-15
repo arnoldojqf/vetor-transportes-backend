@@ -16,7 +16,6 @@ app.use(cors({ origin: (origin, callback) => callback(null, true), credentials: 
 
 // api routes
 app.use('/accounts', require('./accounts/accounts.controller'));
-app.use('/shippings', require('./shippings/shippings.controller'));
 app.use('/reports', require('./reports/reports.controller'));
 app.use('/jobs', require('./jobs/jobs.controller'));
 app.use('/tenants', require('./tenants/tenants.controller'));

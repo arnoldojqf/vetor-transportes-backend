@@ -1,30 +1,9 @@
-const config = require('config.json');
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
-const crypto = require("crypto");
-const sendEmail = require('_helpers/send-email');
-const Role = require('_helpers/role');
-const fetchWrapper = require('_helpers/fetch-wrapper');
-
-const shippings = {}
 const dbConfig = require('config.json');
 const { MongoClient } = require("mongodb");
-const ObjectId = require('mongodb').ObjectID;
-const Excel = require('exceljs');
 
 module.exports = {
     getLogisticsAnalitico
 }
-
-// const toTimestamp = (strDate) => {  
-//     const dt = Date.parse(strDate);  
-//     return dt / 1000;  
-//   }
-
-// const toTimestamp = (strDate) => {  
-//     const dt = new Date(strDate).getTime();  
-//     return dt / 1000;  
-//   }
 
 const toTimestamp = (date) => {  
     const dt = date.getTime();  

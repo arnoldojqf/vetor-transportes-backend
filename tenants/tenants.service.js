@@ -9,8 +9,6 @@ module.exports = {
 async function getById(id) {
     const client = await new MongoClient(dbConfig.connectionString).connect();
 
-    //console.log('getById: ', id);
-
     return client.db("vetor-transportes-backend").collection('tenants').findOne({ id: id });
 }
 
