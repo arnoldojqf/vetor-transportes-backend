@@ -1,4 +1,5 @@
-﻿require('rootpath')();
+﻿require("dotenv").config();
+require('rootpath')();
 const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');
