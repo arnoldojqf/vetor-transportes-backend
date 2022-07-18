@@ -90,15 +90,22 @@ async function register(params, origin) {
     const isFirstAccount = (await db.Account.countDocuments({})) === 0;
     account.role = isFirstAccount ? Role.Admin : Role.User;
     account.verificationToken = randomTokenString();
+    
 
     // hash password
     account.passwordHash = hash(params.password);
 
+    if (process.env.NODE_ENV !== 'production') {
+        account.isVerified = true;
+    }
+
     // save account
     await account.save();
 
-    // send email
-    await sendVerificationEmail(account, origin);
+    if (process.env.NODE_ENV === 'production') {
+        // send email
+        await sendVerificationEmail(account, origin);
+    }
 }
 
 async function verifyEmail({ token }) {
