@@ -15,7 +15,7 @@ RUN npm ci --only=production
 # Bundle app source
 COPY . .
 
-EXPOSE 4000
+EXPOSE 80
 
 #Start the app
 CMD ["node", "server.js"]
