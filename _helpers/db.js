@@ -12,6 +12,8 @@ const {
 
 const mondodbUri = `mongodb://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?authSource=admin`
 
+console.log('mondodbUri', mondodbUri);
+
 mongoose.connect(mondodbUri, connectionOptions).then(() => {
     console.log("Connected to the database!");
   })
