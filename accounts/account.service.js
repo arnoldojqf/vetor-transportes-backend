@@ -95,9 +95,13 @@ async function register(params, origin) {
     // hash password
     account.passwordHash = hash(params.password);
 
+    console.log('process.env.NODE_ENV', process.env.NODE_ENV);
+
     if (process.env.NODE_ENV !== 'production') {
         account.isVerified = true;
     }
+
+    console.log('account', account);
 
     // save account
     await account.save();
