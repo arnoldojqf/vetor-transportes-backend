@@ -98,7 +98,8 @@ async function register(params, origin) {
     console.log('process.env.NODE_ENV', process.env.NODE_ENV);
 
     if (process.env.NODE_ENV !== 'production') {
-        account.isVerified = true;
+        account.verified = Date.now();
+        account.verificationToken = undefined;
     }
 
     console.log('account', account);
