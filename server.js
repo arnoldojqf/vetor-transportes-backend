@@ -32,7 +32,8 @@ app.use(errorHandler);
 // schedule.importClaims();
 
 // start server
-const port = process.env.NODE_ENV === 'production' ? (process.env.PORT || 80) : 4000;
+//const port = process.env.NODE_ENV === 'production' ? (process.env.PORT || 80) : 4000;
+const port = process.env.PORT;
 app.listen(port, () => {
     console.log('Environment: ' + process.env.NODE_ENV);
     console.log('Server listening on port ' + port);
