@@ -107,7 +107,7 @@ async function register(params, origin) {
     // save account
     await account.save();
 
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV === 'production') {
         // send email
         await sendVerificationEmail(account, origin);
     }
