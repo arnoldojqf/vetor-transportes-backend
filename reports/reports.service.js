@@ -1,5 +1,5 @@
-const dbConfig = require('config.json');
 const { MongoClient } = require("mongodb");
+const { uri } = require("_helpers/mongoClient");
 
 module.exports = {
     getLogisticsAnalitico
@@ -14,7 +14,7 @@ async function getLogisticsAnalitico() {
     let result = [];
         
     try {
-        const client = await new MongoClient(dbConfig.connectionString).connect();
+        const client = await new MongoClient(uri).connect();
 
         const pipeline = [     
             { 

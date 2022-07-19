@@ -1,5 +1,4 @@
-﻿const dbConfig = require('config.json');
-const { MongoClient } = require("mongodb");
+﻿const { MongoClient } = require("mongodb");
 const { uri } = require("_helpers/mongoClient");
 
 module.exports = {

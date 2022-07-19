@@ -1,11 +1,11 @@
 ﻿const config = require('config.json');
 const fetchWrapper = require('_helpers/fetch-wrapper');
 const tenantService = require('tenants/tenants.service');
-const dbConfig = require('config.json');
 const { MongoClient } = require("mongodb");
 const Excel = require('exceljs');
 var claims = [];
 var workbook = new Excel.Workbook();
+const { uri } = require("_helpers/mongoClient");
 
 module.exports = {    
     importRoutes,
@@ -15,14 +15,14 @@ module.exports = {
 };
 
 async function getById(id) {
-    const client = await new MongoClient(dbConfig.connectionString).connect();
+    const client = await new MongoClient(uri).connect();
 
     return client.db("vetor-transportes-backend").collection('shippings').findOne({ id: id });
 }
 
 async function update(filter, setData, upsert) {
 
-    const client = await new MongoClient(dbConfig.connectionString).connect();
+    const client = await new MongoClient(uri).connect();
 
     if (upsert) {
         return await client.db("vetor-transportes-backend").collection('shippings').updateOne(filter, setData, { upsert: true });
