@@ -15,7 +15,7 @@ services:
   app:
     depends_on:
       - mongodb
-    build: .
+    image: arnoldojqf/vetorbe:testing
     restart: unless-stopped
     env_file: ./.env
     ports:
@@ -28,6 +28,13 @@ services:
       - DB_PORT=$MONGODB_DOCKER_PORT
     stdin_open: true
     tty: true
+  frontend:
+    depends_on:
+      - app
+    image: arnoldojqf/vetorfe:testing
+    restart: unless-stopped    
+    ports:
+      - 80:80  
 
 volumes:
   db:

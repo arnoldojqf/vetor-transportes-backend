@@ -9,6 +9,10 @@ servers:
     description: Local development server
   - url: http://ec2-18-134-129-75.eu-west-2.compute.amazonaws.com/
     description: Sandbox AWS free tier server
+  - url: http://ec2-18-134-129-75.eu-west-2.compute.amazonaws.com:8080/
+    description: Sandbox AWS free tier server port 8080
+  - url: http://ec2-18-134-129-75.eu-west-2.compute.amazonaws.com:4000/
+    description: Sandbox AWS free tier server port 4000
 
 paths:
   /accounts/authenticate:
