@@ -142,6 +142,8 @@ async function getLogisticsAnalitico() {
             { $unwind: { path: "$stops", preserveNullAndEmptyArrays: true } },
             { $unwind: { path: "$stops.orders", preserveNullAndEmptyArrays: true } },
             { $unwind: { path: "$stops.orders.transportUnits", preserveNullAndEmptyArrays: true } },
+            { $addFields: { "deliveryStatus": { $trim: { input: "$stops.orders.transportUnits.shipment.substatus" } } } },
+            { $match: { "deliveryStatus" : { $eq: "delivered" } } },
             {
                 $addFields: {
                     "dtDelivery": {
@@ -221,7 +223,7 @@ async function getLogisticsAnalitico() {
                   }
             },    
             { $unwind: { path: "$shipments", preserveNullAndEmptyArrays: true } },
-            { $unset: ["shipments.stops","shipments.dtDelivery","shipments.fisrtDateDeliveryByDay","shipments.deliveredPerHour"] },
+            { $unset: ["shipments.stops","shipments.dtDelivery","shipments.fisrtDateDeliveryByDay","shipments.deliveredPerHour","shipments.deliveryStatus"] },
             { $group: { _id: "$shipments", } },
             { $replaceRoot: { newRoot: "$_id" } },            
             { $unwind: { path: "$claimsData", preserveNullAndEmptyArrays: true } },
