@@ -17,14 +17,14 @@ async function getLogisticsAnalitico() {
         const client = await new MongoClient(uri).connect();
 
         const pipeline = [     
-            // { 
-            //     $match: {
-            //         "initDate": {
-            //             $gte: toTimestamp(new Date(new Date().setHours(00, 00, 00))),
-            //             $lte: toTimestamp(new Date(new Date().setHours(23, 59, 59))),
-            //         }
-            //     } 
-            // },                           
+            { 
+                $match: {
+                    "initDate": {
+                        $gte: toTimestamp(new Date(new Date().setHours(00, 00, 00))),
+                        $lte: toTimestamp(new Date(new Date().setHours(23, 59, 59))),
+                    }
+                } 
+            },                           
             {
                 $project : {
                     driverName: "$driver.driverName", 
