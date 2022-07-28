@@ -3,8 +3,7 @@ version: "3.8"
 services:
   mongodb:
     image: mongo:5.0.6
-    restart: unless-stopped
-    env_file: ./.env
+    restart: unless-stopped    
     environment:
       - MONGO_INITDB_ROOT_USERNAME=$MONGODB_USER
       - MONGO_INITDB_ROOT_PASSWORD=$MONGODB_PASSWORD
@@ -16,8 +15,7 @@ services:
     depends_on:
       - mongodb
     image: arnoldojqf/vetorbe:testing
-    restart: unless-stopped
-    env_file: ./.env
+    restart: unless-stopped    
     ports:
       - $NODE_LOCAL_PORT:$NODE_DOCKER_PORT
     environment:
